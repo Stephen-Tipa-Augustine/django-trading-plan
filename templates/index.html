@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trading</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Latest compiled JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <form class="d-flex flex-column align-content-center justify-content-center mt-5">
+                    <div class="row">
+                        <div class="col-12 py-2">
+                            <label> Starting Balance
+                                <input type="number" id="balance" onchange="updateBalance(this.value)">
+                            </label>
+                        </div>
+                        <div class="col-12 py-2">
+                            <label> Growth
+                                <input type="number" id="growth" onchange="updateGrowth(this.value)">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <a href="#" onclick="calculate(this.event)" id="submit-btn" class="btn btn-block btn-primary">Calculate</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+{#    Model form for editing actual return values#}
+        <div class="modal" id="myModal">
+          <div class="modal-dialog">
+            <div class="modal-content">
+
+              <!-- Modal Header -->
+              <div class="modal-header">
+                <h4 class="modal-title">Edit Actual Return</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+
+              <!-- Modal body -->
+              <div class="modal-body">
+                <div class="form-floating mb-3 mt-3">
+                  <input type="number" class="form-control" id="return" onchange="updateActualReturn(this.value)"
+                         placeholder="Enter return" name="return">
+                  <label for="email">Value</label>
+                </div>
+              </div>
+
+              <!-- Modal footer -->
+              <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveActualReturn()"
+                        data-bs-dismiss="modal">Save</button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-12">
+                <div class="container mt-3">
+                  <h2>Records</h2>
+                  <p>Trade Summary</p>
+                  <table class="table table-hover">
+                    <thead>
+                      <tr>
+                        <th>Day</th>
+                        <th>Start Equity</th>
+                        <th>Day End Target</th>
+                        <th>Day End Actual</th>
+                        <th>Over/Under</th>
+                        <th>O/U Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in data %}
+                            <tr>
+                                <td>{{ item.day }}</td>
+                                <td>{{ item.starting_balance }}</td>
+                                <td>{{ item.target }}</td>
+                                <td><span>
+                                    {{ item.actual }}
+                                    <button type="button" class="btn" data-bs-toggle="modal"
+                                            onclick="returnDay = {{ item.day }};"
+                                            data-bs-target="#myModal">
+                                      <i class="fa fa-edit text-warning mr-2"></i>
+                                    </button>
+                                </span></td>
+                                <td>{{ item.over_under }}</td>
+                                <td>{{ item.over_under_total }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+{{ user|json_script:"user-data" }}
+<script>
+    let startingBalance = 0, growth = 0, actualReturn = null, returnDay = null;
+
+    const user = JSON.parse(document.getElementById('user-data').textContent);
+    console.log('Logged in user: ',user);
+
+    function updateBalance(value) {
+        startingBalance = value;
+        console.log(`New balance: ${startingBalance}`);
+    }
+
+    function updateGrowth(value) {
+        growth = value;
+    }
+
+    function updateActualReturn(value) {
+        actualReturn = value;
+    }
+
+    function saveActualReturn() {
+        axios({
+          method: 'post',
+          url: window.location.origin + '/api/actual-returns/',
+          data: {
+            value: actualReturn,
+            day: returnDay,
+            user: user.id
+          }
+        })
+            .then(() => location.reload())
+            .catch(error => console.log(error));
+    }
+
+    function calculate(event) {
+        {#event.preventDefault();#}
+
+        console.log('Submitting to ', window.location.origin);
+
+        // Send a POST request
+        axios({
+          method: 'post', {# 'put' #}
+          url: window.location.origin + '/api/info/',
+          data: {
+            starting_balance: startingBalance,
+            growth: growth,
+            user: user.id
+          }
+        })
+            .then(() => location.reload())
+            .catch(error => console.log(error));
+    }
+
+    axios({
+      method: 'get',
+      url: window.location.origin + '/api/info/' + user.id.toString(),
+    })
+      .then(function (response) {
+        startingBalance = response.data.starting_balance;
+        growth = response.data.growth;
+        document.getElementById('balance').value = startingBalance;
+        document.getElementById('growth').value = growth;
+      });
+</script>
+</body>
+</html>
